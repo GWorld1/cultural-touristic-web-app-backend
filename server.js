@@ -12,12 +12,12 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Import routes
-const authRoutes = require('./routes/auth.routes');
+const authRouter = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const imageRoutes = require('./routes/image.routes');
 
 // Use routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authRouter);
 app.use('/api/users', userRoutes);
 app.use('/api/images', imageRoutes);
 
