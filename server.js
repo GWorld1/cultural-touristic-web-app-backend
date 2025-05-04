@@ -1,11 +1,7 @@
 const express = require('express');
-const { Client } = require('appwrite');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const dotenv = require('dotenv');
 
-// Load environment variables
-dotenv.config();
 
 // Initialize Express app
 const app = express();
@@ -28,6 +24,7 @@ app.use('/api/images', imageRoutes);
 // Root route
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to Cultural Touristic Web Application API' });
+  
 });
 
 // Start server

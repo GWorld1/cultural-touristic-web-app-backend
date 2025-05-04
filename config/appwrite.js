@@ -1,9 +1,11 @@
-const sdk = require("node-appwrite");
-dotenv.config();
+// Load environment variables
 const dotenv = require('dotenv');
+dotenv.config();
+
+const sdk = require("node-appwrite");
 const client = new sdk.Client();
 
-client = new Client()
+client 
   .setEndpoint(process.env.APPWRITE_ENDPOINT)
   .setProject(process.env.APPWRITE_PROJECT_ID)
   .setJWT(process.env.APPWRITE_API_KEY)
