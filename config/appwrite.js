@@ -1,16 +1,17 @@
-const { Client, Account, Databases, Storage } = require('appwrite');
-const dotenv = require('dotenv');
-
+const sdk = require("node-appwrite");
 dotenv.config();
+const dotenv = require('dotenv');
+const client = new sdk.Client();
 
-const client = new Client()
+client = new Client()
   .setEndpoint(process.env.APPWRITE_ENDPOINT)
   .setProject(process.env.APPWRITE_PROJECT_ID)
-  .setJWT(process.env.APPWRITE_API_KEY);
+  .setJWT(process.env.APPWRITE_API_KEY)
+  
 
-const account = new Account(client);
-const databases = new Databases(client);
-const storage = new Storage(client);
+const account = new sdk.Account(client)
+const databases = new sdk.Databases(client);
+const storage = new sdk.Storage(client);
 
 module.exports = {
   client,
