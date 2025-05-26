@@ -1,6 +1,10 @@
-const { account, databases, databaseId, usersCollectionId } = require('../config/appwrite');
+const { account,users, databases, databaseId, usersCollectionId } = require('../config/appwrite');
 const { ID, Query } = require('node-appwrite');
 const jwt = require('jsonwebtoken');
+
+// Load environment variables
+const dotenv = require('dotenv');
+dotenv.config();
 
 const authController = {
 
@@ -38,7 +42,7 @@ async register (req, res) {
     );
 
     // Create email verification
-    await account.createVerification(process.env.APP_URL + '/verify-email');
+    //await account.createVerification(process.env.APP_URL + '/verify-email');
 
     res.status(201).json({
       message: 'User registered successfully. Please verify your email.',
@@ -70,11 +74,18 @@ async login (req, res) {
     }
 
     // Create email session
-    const session = await account.createEmailSession(email, password);
+    let session = await account.createEmailPasswordSession(email, password);
     
+
     // Get user account
-    const user = await account.get();
+    let user = await users.get(session.userId);
+  
+    // Check if user is verified
+    if (!user.emailVerification) {
+      return res.status(401).json({ error: 'Email not verified' });
+    }
     
+    console.log('User:', user);
     // Get user data from database
     const userData = await databases.listDocuments(
       databaseId,
@@ -82,7 +93,7 @@ async login (req, res) {
       [Query.equal('userId', user.$id)]
     );
 
-    // Generate JWT token
+    // Generate JWT with appwrite token
     const token = jwt.sign(
       { 
         userId: user.$id,
@@ -108,7 +119,7 @@ async login (req, res) {
     console.error('Login error:', error);
     
     if (error.code === 401) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Invalid credentials'});
     }
     
     res.status(500).json({ error: 'Failed to login', details: error.message });
@@ -137,8 +148,13 @@ async logout (req, res)  {
 async getCurrentUser (req, res)  {
   try {
     // Get user account
-    const user = await account.get();
+    const user = req.user; // This should be set by the auth middleware
+    if (!user) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
     
+    console.log('Current user:', user);
+
     // Get user data from database
     const userData = await databases.listDocuments(
       databaseId,

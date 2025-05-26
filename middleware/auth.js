@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const { account } = require('../config/appwrite');
-
+// Load environment variables
+const dotenv = require('dotenv');
+dotenv.config();
 /**
  * Authentication middleware
  */
@@ -29,20 +31,23 @@ const authMiddleware = {
         // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+        console.log('Decoded JWT:', decoded);
         // Get current user from Appwrite
         try {
           // Check if session is valid in Appwrite
-          const currentUser = await account.get();
+         // const currentUser = await account.get();
           
           // Attach user info to request
           req.user = {
-            userId: decoded.userId,
+            $id: decoded.userId,
             email: decoded.email,
             role: decoded.role
           };
           
           next();
         } catch (error) {
+          console.error('(Middleware) Get current user from Appwrite by Session error:', error);
+
           // Session is invalid or expired in Appwrite
           return res.status(401).json({ error: 'Not authorized, session expired' });
         }

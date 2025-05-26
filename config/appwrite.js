@@ -8,16 +8,21 @@ const client = new sdk.Client();
 client 
   .setEndpoint(process.env.APPWRITE_ENDPOINT)
   .setProject(process.env.APPWRITE_PROJECT_ID)
-  .setJWT(process.env.APPWRITE_API_KEY)
+  .setKey(process.env.APPWRITE_API_KEY)
+//  .setSelfSigned(true); // Use only on dev mode (Self-signed SSL certificate)
   
 
-const account = new sdk.Account(client)
+const account = new sdk.Account(client);
+const users = new sdk.Users(client);
 const databases = new sdk.Databases(client);
 const storage = new sdk.Storage(client);
+
+
 
 module.exports = {
   client,
   account,
+  users,
   databases,
   storage,
   databaseId: process.env.APPWRITE_DATABASE_ID,
