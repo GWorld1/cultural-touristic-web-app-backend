@@ -1,43 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { storage, imagesBucketId: bucketId } = require('../config/appwrite');
+const imageController = require('../controllers/image.controller');
+const { upload } = require('../config/cloudinary');
 
-// Upload image
-router.post('/upload', async (req, res) => {
-  try {
-    const file = req.files.image;
-    const response = await storage.createFile(
-      bucketId,
-      file.data,
-      [
-        `role:member`,
-        `userId:${req.userId}`
-      ]
-    );
-    res.status(201).json(response);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// Upload routes
+router.post('/uploadImage', upload.single('image'), imageController.uploadSingleImage);
+router.post('/upload-multiple', upload.array('images', 5), imageController.uploadMultipleImages);
 
-// List images
-router.get('/', async (req, res) => {
-  try {
-    const files = await storage.listFiles(bucketId);
-    res.json(files);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Delete image
-router.delete('/:id', async (req, res) => {
-  try {
-    await storage.deleteFile(bucketId, req.params.id);
-    res.json({ message: 'Image deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// Image management routes
+router.get('/all', imageController.getAllImages);
+router.get('/:public_id', imageController.getImageByPublicId);
+router.delete('/:public_id', imageController.deleteImage);
+router.put('/:public_id', imageController.updateImageDetails);
 
 module.exports = router;
