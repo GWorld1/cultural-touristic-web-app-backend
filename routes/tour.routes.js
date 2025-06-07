@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { body, param, query, validationResult } = require('express-validator');
-const  authMiddleware  = require('../middleware/auth');
+const authMiddleware = require('../middleware/auth');
+const { uploadSingle, handleUploadError } = require('../middleware/upload');
+const CloudinaryService = require('../services/cloudinary.service');
 
 
 
@@ -21,7 +23,7 @@ const handleValidationErrors = (req, res, next) => {
 
 const TourService = require('../services/tours');
 
-router.get("/api/tours", [
+router.get("/", [
   query('page').optional().isInt({ min: 1 }),
   query('limit').optional().isInt({ min: 1, max: 100 }),
   query('category').optional().isString(),
@@ -76,7 +78,7 @@ router.get("/api/tours", [
 /**
  * GET /api/tours/:id - Get a single tour by ID
  */
-router.get('/api/tours/:id', [
+router.get('/:id', [
   param('id').isString().notEmpty(),
   handleValidationErrors
 ], async (req, res) => {
@@ -108,8 +110,9 @@ router.get('/api/tours/:id', [
 /**
  * POST /api/tours - Create a new tour
  */
-router.post('/api/tours', [
+router.post('/', [
   authMiddleware.protect,
+  uploadSingle('thumbnail'),
   body('title').isString().notEmpty().isLength({ max: 255 }),
   body('description').isString().notEmpty().isLength({ max: 2000 }),
   body('metadata.author').isString().notEmpty(),
@@ -121,9 +124,32 @@ router.post('/api/tours', [
   try {
     const tourData = req.body;
     const userId = req.userId;
-    
+    let thumbnailUrl = '';
+
+    // Handle thumbnail upload if provided
+    if (req.file) {
+      const uploadResult = await CloudinaryService.uploadImage(
+        req.file.buffer,
+        'tour',
+        userId,
+        req.file.originalname
+      );
+
+      if (uploadResult.success) {
+        thumbnailUrl = uploadResult.url;
+        // Add thumbnail URL to tour metadata
+        if (!tourData.metadata) tourData.metadata = {};
+        tourData.metadata.thumbnailUrl = thumbnailUrl;
+      } else {
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to upload thumbnail: ' + uploadResult.error
+        });
+      }
+    }
+
     const result = await TourService.createTour(tourData, userId);
-    
+
     if (result.success) {
       res.status(201).json({
         success: true,
@@ -147,8 +173,9 @@ router.post('/api/tours', [
 /**
  * PUT /api/tours/:id - Update a tour
  */
-router.put('/api/tours/:id', [
+router.put('/:id', [
   authMiddleware.protect,
+  uploadSingle('thumbnail'),
   param('id').isString().notEmpty(),
   body('title').optional().isString().isLength({ max: 255 }),
   body('description').optional().isString().isLength({ max: 2000 }),
@@ -158,9 +185,30 @@ router.put('/api/tours/:id', [
     const { id } = req.params;
     const updateData = req.body;
     const userId = req.userId;
-    
+
+    // Handle thumbnail upload if provided
+    if (req.file) {
+      const uploadResult = await CloudinaryService.uploadImage(
+        req.file.buffer,
+        'tour',
+        userId,
+        req.file.originalname
+      );
+
+      if (uploadResult.success) {
+        // Add thumbnail URL to update data
+        if (!updateData.metadata) updateData.metadata = {};
+        updateData.metadata.thumbnailUrl = uploadResult.url;
+      } else {
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to upload thumbnail: ' + uploadResult.error
+        });
+      }
+    }
+
     const result = await TourService.updateTour(id, updateData, userId);
-    
+
     if (result.success) {
       res.json({
         success: true,
@@ -184,7 +232,7 @@ router.put('/api/tours/:id', [
 /**
  * DELETE /api/tours/:id - Delete a tour
  */
-router.delete('/api/tours/:id', [
+router.delete('/:id', [
   authMiddleware.protect,
   param('id').isString().notEmpty(),
   handleValidationErrors
@@ -218,7 +266,7 @@ router.delete('/api/tours/:id', [
 /**
  * PUT /api/tours/:id/publish - Publish a tour
  */
-router.put('/api/tours/:id/publish', [
+router.put('/:id/publish', [
   authMiddleware.protect,
   param('id').isString().notEmpty(),
   handleValidationErrors
@@ -252,7 +300,7 @@ router.put('/api/tours/:id/publish', [
 /**
  * PUT /api/tours/:id/unpublish - Unpublish a tour
  */
-router.put('/api/tours/:id/unpublish', [
+router.put('/:id/unpublish', [
   authMiddleware.protect,
   param('id').isString().notEmpty(),
   handleValidationErrors
@@ -283,5 +331,7 @@ router.put('/api/tours/:id/unpublish', [
   }
 });
 
+// Error handling middleware for upload errors
+router.use(handleUploadError);
 
 module.exports = router;
