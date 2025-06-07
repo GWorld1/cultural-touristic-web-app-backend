@@ -27,5 +27,6 @@ module.exports = {
   storage,
   databaseId: process.env.APPWRITE_DATABASE_ID,
   usersCollectionId: process.env.APPWRITE_USERS_COLLECTION_ID,
+  toursCollectionId: process.env.APPWRITE_TOURS_COLLECTION_ID,
   imagesBucketId: process.env.APPWRITE_IMAGES_BUCKET_ID
 };
