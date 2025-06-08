@@ -1,5 +1,5 @@
 const { Query } = require('node-appwrite');
-const {databaseId: DATABASE_ID } = require('../config/appwrite');
+const {databases, databaseId: DATABASE_ID } = require('../config/appwrite');
 
 const COLLECTIONS = {
   TOURS: '68438aa8003143e4d330',
@@ -134,6 +134,7 @@ class TourService {
    * Create a new tour
    */
   static async createTour(tourData, userId) {
+    
     try {
       const tour = await databases.createDocument(
         DATABASE_ID,
@@ -143,13 +144,14 @@ class TourService {
           title: tourData.title,
           description: tourData.description,
           authorId: userId,
-          author: tourData.metadata.author,
-          tags: tourData.metadata.tags || [],
-          isPublic: tourData.metadata.isPublic || false,
-          estimatedDuration: tourData.metadata.estimatedDuration || 10,
+          author: tourData.author,
+          tags: tourData.tags || [],
+          isPublic: tourData.isPublic == 'true' ? true : false,
+    //    estimatedDuration: tourData.estimatedDuration || 10,
           category: tourData.category || '',
           status: 'draft',
           viewCount: 0,
+          thumbnailUrl: tourData.metadata.thumbnailUrl || '',
           settings: JSON.stringify(tourData.settings || {
             autoRotate: false,
             autoRotateSpeed: 2,

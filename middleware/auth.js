@@ -31,7 +31,7 @@ const authMiddleware = {
         // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        console.log('Decoded JWT:', decoded);
+        //console.log('Decoded JWT:', decoded);
         // Get current user from Appwrite
         try {
           // Check if session is valid in Appwrite

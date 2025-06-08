@@ -108,11 +108,10 @@ router.get('/:id', [
 });
 
 /**
- * POST /api/tours - Create a new tour
+ * POST /api/tours/test - Create a new tour (JSON only, for testing)
  */
-router.post('/', [
+router.post('/test', [
   authMiddleware.protect,
-  uploadSingle('thumbnail'),
   body('title').isString().notEmpty().isLength({ max: 255 }),
   body('description').isString().notEmpty().isLength({ max: 2000 }),
   body('metadata.author').isString().notEmpty(),
@@ -123,8 +122,79 @@ router.post('/', [
 ], async (req, res) => {
   try {
     const tourData = req.body;
-    const userId = req.userId;
+    const userId = req.user.$id;
+
+    const result = await TourService.createTour(tourData, userId);
+
+    if (result.success) {
+      res.status(201).json({
+        success: true,
+        data: result
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Error in POST /api/tours/test:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * POST /api/tours - Create a new tour
+ */
+router.post('/', [
+  authMiddleware.protect,
+  uploadSingle('thumbnail'),
+  body('title').isString().notEmpty().isLength({ max: 255 }),
+  body('description').isString().notEmpty().isLength({ max: 2000 }),
+  body('author').isString().notEmpty(),
+  body('estimatedDuration').optional(),
+  body('isPublic').optional().isBoolean(),
+  handleValidationErrors
+], async (req, res) => {
+  try {
+    const tourData = req.body;
+    const userId = req.user.$id;
     let thumbnailUrl = '';
+
+    // Parse form data fields
+    // Parse tags if it's a string (from form-data)
+    if (tourData.tags && typeof tourData.tags === 'string') {
+      try {
+        tourData.tags = JSON.parse(tourData.tags);
+      } catch (e) {
+        // If JSON parsing fails, treat as comma-separated string
+        tourData.tags = tourData.tags.split(',').map(tag => tag.trim());
+      }
+    }
+
+    // Ensure tags is an array
+    if (!Array.isArray(tourData.tags)) {
+      tourData.tags = [];
+    }
+
+    // Parse isPublic boolean
+    if (tourData.isPublic && typeof tourData.isPublic === 'string') {
+      tourData.isPublic = tourData.isPublic.toLowerCase() === 'true';
+    }
+
+    // Parse estimatedDuration
+    if (tourData.estimatedDuration && typeof tourData.estimatedDuration === 'string') {
+      tourData.estimatedDuration = parseInt(tourData.estimatedDuration);
+    }
+
+    // console.log("Parsed form data:", {
+    //   tags: tourData.tags,
+    //   isPublic: tourData.isPublic,
+    //   estimatedDuration: tourData.estimatedDuration
+    // });
 
     // Handle thumbnail upload if provided
     if (req.file) {
@@ -147,6 +217,7 @@ router.post('/', [
         });
       }
     }
+
 
     const result = await TourService.createTour(tourData, userId);
 
@@ -184,7 +255,7 @@ router.put('/:id', [
   try {
     const { id } = req.params;
     const updateData = req.body;
-    const userId = req.userId;
+    const userId = req.user.$id;
 
     // Handle thumbnail upload if provided
     if (req.file) {
@@ -239,7 +310,7 @@ router.delete('/:id', [
 ], async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.userId;
+    const userId = req.user.$id;
     
     const result = await TourService.deleteTour(id, userId);
     
@@ -273,7 +344,7 @@ router.put('/:id/publish', [
 ], async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.userId;
+    const userId = req.user.$id;
     
     const result = await TourService.toggleTourPublish(id, true, userId);
     
@@ -307,7 +378,7 @@ router.put('/:id/unpublish', [
 ], async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.userId;
+    const userId = req.user.$id;
     
     const result = await TourService.toggleTourPublish(id, false, userId);
     
