@@ -207,12 +207,12 @@ class TourService {
       if (updateData.description) updatePayload.description = updateData.description;
       if (updateData.startSceneId) updatePayload.startSceneId = updateData.startSceneId;
       if (updateData.settings) updatePayload.settings = JSON.stringify(updateData.settings);
-      if (updateData.metadata) {
-        if (updateData.metadata.tags) updatePayload.tags = updateData.metadata.tags;
-        if (updateData.metadata.isPublic !== undefined) updatePayload.isPublic = updateData.metadata.isPublic;
-        if (updateData.metadata.estimatedDuration) updatePayload.estimatedDuration = updateData.metadata.estimatedDuration;
-        if (updateData.metadata.thumbnailUrl) updatePayload.thumbnailUrl = updateData.metadata.thumbnailUrl;
-      }
+     
+      if (updateData.tags) updatePayload.tags = updateData.tags;
+      if (updateData.isPublic !== undefined) updatePayload.isPublic = updateData.isPublic;
+      if (updateData.estimatedDuration) updatePayload.estimatedDuration = updateData.estimatedDuration;
+      if (updateData.thumbnailUrl) updatePayload.thumbnailUrl = updateData.thumbnailUrl;
+      
       
       const tour = await databases.updateDocument(
         DATABASE_ID,

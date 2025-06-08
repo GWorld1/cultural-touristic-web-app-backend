@@ -29,7 +29,6 @@ router.get("/", [
   query('category').optional().isString(),
   query('search').optional().isString(),
   query('isPublic').optional().isBoolean(),
-  query('tags').optional().isArray(),
   handleValidationErrors
 ] ,async (req, res) => {
  try {
@@ -39,14 +38,23 @@ router.get("/", [
     if (category) filters.category = category;
     if (search) filters.search = search;
     if (isPublic !== undefined) filters.isPublic = isPublic === 'true';
-    if (tags) filters.tags = Array.isArray(tags) ? tags : [tags];
+    // Parse tags if it's a string (from query)
+    if (tags && typeof tags === 'string') {
+      try {
+        filters.tags = JSON.parse(tags);
+      } catch (e) {
+        // If JSON parsing fails, treat as comma-separated string
+        filters.tags = tags.split(',').map(tag => tag.trim());
+      }
+    }
+    
     if (authorId) filters.authorId = authorId;
     
     const pagination = {
       limit: parseInt(limit),
       offset: (parseInt(page) - 1) * parseInt(limit)
     };
-    
+ 
     const result = await TourService.getTours(filters, pagination);
     
     if (result.success) {
@@ -76,7 +84,7 @@ router.get("/", [
 });
 
 /**
- * GET /api/tours/:id - Get a single tour by ID
+ *@route GET /api/tours/:id - Get a single tour by ID
  */
 router.get('/:id', [
   param('id').isString().notEmpty(),
@@ -268,8 +276,9 @@ router.put('/:id', [
 
       if (uploadResult.success) {
         // Add thumbnail URL to update data
-        if (!updateData.metadata) updateData.metadata = {};
-        updateData.metadata.thumbnailUrl = uploadResult.url;
+        
+    //  if (!updateData.metadata) updateData.metadata = {};
+        updateData.thumbnailUrl = uploadResult.url;
       } else {
         return res.status(500).json({
           success: false,
