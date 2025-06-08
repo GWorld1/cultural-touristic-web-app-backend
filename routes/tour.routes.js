@@ -265,6 +265,16 @@ router.put('/:id', [
     const updateData = req.body;
     const userId = req.user.$id;
 
+    // Parse tags if it's a string
+    if (updateData.tags && typeof updateData.tags === 'string') {
+      try {
+        updateData.tags = JSON.parse(updateData.tags);
+      } catch (e) {
+        // If JSON parsing fails, treat as comma-separated string
+        updateData.tags = updateData.tags.split(',').map(tag => tag.trim());
+      }
+    }
+
     // Handle thumbnail upload if provided
     if (req.file) {
       const uploadResult = await CloudinaryService.uploadImage(
@@ -276,7 +286,7 @@ router.put('/:id', [
 
       if (uploadResult.success) {
         // Add thumbnail URL to update data
-        
+
     //  if (!updateData.metadata) updateData.metadata = {};
         updateData.thumbnailUrl = uploadResult.url;
       } else {

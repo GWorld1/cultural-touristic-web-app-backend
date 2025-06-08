@@ -209,7 +209,7 @@ class TourService {
       if (updateData.settings) updatePayload.settings = JSON.stringify(updateData.settings);
      
       if (updateData.tags) updatePayload.tags = updateData.tags;
-      if (updateData.isPublic !== undefined) updatePayload.isPublic = updateData.isPublic;
+      if (updateData.isPublic !== undefined) updatePayload.isPublic = updateData.isPublic == 'true' ? true : false;
       if (updateData.estimatedDuration) updatePayload.estimatedDuration = updateData.estimatedDuration;
       if (updateData.thumbnailUrl) updatePayload.thumbnailUrl = updateData.thumbnailUrl;
       
