@@ -3,7 +3,7 @@ const router = express.Router();
 const { body, param, query, validationResult } = require('express-validator');
 const authMiddleware = require('../middleware/auth');
 const { uploadSingle, handleUploadError } = require('../middleware/upload');
-const CloudinaryService = require('../services/cloudinary.service');
+const tourController = require('../controllers/tour.controller');
 
 
 
@@ -21,7 +21,7 @@ const handleValidationErrors = (req, res, next) => {
 };
 
 
-const TourService = require('../services/tours');
+
 
 router.get("/", [
   query('page').optional().isInt({ min: 1 }),
@@ -30,58 +30,7 @@ router.get("/", [
   query('search').optional().isString(),
   query('isPublic').optional().isBoolean(),
   handleValidationErrors
-] ,async (req, res) => {
- try {
-    const { page = 1, limit = 10, category, search, isPublic, tags, authorId } = req.query;
-    
-    const filters = {};
-    if (category) filters.category = category;
-    if (search) filters.search = search;
-    if (isPublic !== undefined) filters.isPublic = isPublic === 'true';
-    // Parse tags if it's a string (from query)
-    if (tags && typeof tags === 'string') {
-      try {
-        filters.tags = JSON.parse(tags);
-      } catch (e) {
-        // If JSON parsing fails, treat as comma-separated string
-        filters.tags = tags.split(',').map(tag => tag.trim());
-      }
-    }
-    
-    if (authorId) filters.authorId = authorId;
-    
-    const pagination = {
-      limit: parseInt(limit),
-      offset: (parseInt(page) - 1) * parseInt(limit)
-    };
- 
-    const result = await TourService.getTours(filters, pagination);
-    
-    if (result.success) {
-      res.json({
-        success: true,
-        data: {
-          tours: result.tours,
-          total: result.total,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          hasMore: result.tours.length === parseInt(limit)
-        }
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('Error in GET /api/tours:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
+], tourController.getTours);
 
 /**
  *@route GET /api/tours/:id - Get a single tour by ID
@@ -89,31 +38,7 @@ router.get("/", [
 router.get('/:id', [
   param('id').isString().notEmpty(),
   handleValidationErrors
-], async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const result = await TourService.getTourById(id);
-    
-    if (result.success) {
-      res.json({
-        success: true,
-        data: result
-      });
-    } else {
-      res.status(404).json({
-        success: false,
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('Error in GET /api/tours/:id:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
+], tourController.getTourById);
 
 /**
  * POST /api/tours/test - Create a new tour (JSON only, for testing)
@@ -127,32 +52,7 @@ router.post('/test', [
   body('metadata.isPublic').optional().isBoolean(),
   body('metadata.tags').optional().isArray(),
   handleValidationErrors
-], async (req, res) => {
-  try {
-    const tourData = req.body;
-    const userId = req.user.$id;
-
-    const result = await TourService.createTour(tourData, userId);
-
-    if (result.success) {
-      res.status(201).json({
-        success: true,
-        data: result
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('Error in POST /api/tours/test:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
+], tourController.createTourTest);
 
 /**
  * POST /api/tours - Create a new tour
@@ -166,88 +66,7 @@ router.post('/', [
   body('estimatedDuration').optional(),
   body('isPublic').optional().isBoolean(),
   handleValidationErrors
-], async (req, res) => {
-  try {
-    const tourData = req.body;
-    const userId = req.user.$id;
-    let thumbnailUrl = '';
-
-    // Parse form data fields
-    // Parse tags if it's a string (from form-data)
-    if (tourData.tags && typeof tourData.tags === 'string') {
-      try {
-        tourData.tags = JSON.parse(tourData.tags);
-      } catch (e) {
-        // If JSON parsing fails, treat as comma-separated string
-        tourData.tags = tourData.tags.split(',').map(tag => tag.trim());
-      }
-    }
-
-    // Ensure tags is an array
-    if (!Array.isArray(tourData.tags)) {
-      tourData.tags = [];
-    }
-
-    // Parse isPublic boolean
-    if (tourData.isPublic && typeof tourData.isPublic === 'string') {
-      tourData.isPublic = tourData.isPublic.toLowerCase() === 'true';
-    }
-
-    // Parse estimatedDuration
-    if (tourData.estimatedDuration && typeof tourData.estimatedDuration === 'string') {
-      tourData.estimatedDuration = parseInt(tourData.estimatedDuration);
-    }
-
-    // console.log("Parsed form data:", {
-    //   tags: tourData.tags,
-    //   isPublic: tourData.isPublic,
-    //   estimatedDuration: tourData.estimatedDuration
-    // });
-
-    // Handle thumbnail upload if provided
-    if (req.file) {
-      const uploadResult = await CloudinaryService.uploadImage(
-        req.file.buffer,
-        'tour',
-        userId,
-        req.file.originalname
-      );
-
-      if (uploadResult.success) {
-        thumbnailUrl = uploadResult.url;
-        // Add thumbnail URL to tour metadata
-        if (!tourData.metadata) tourData.metadata = {};
-        tourData.metadata.thumbnailUrl = thumbnailUrl;
-      } else {
-        return res.status(500).json({
-          success: false,
-          error: 'Failed to upload thumbnail: ' + uploadResult.error
-        });
-      }
-    }
-
-
-    const result = await TourService.createTour(tourData, userId);
-
-    if (result.success) {
-      res.status(201).json({
-        success: true,
-        data: result
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('Error in POST /api/tours:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
+], tourController.createTour);
 
 /**
  * PUT /api/tours/:id - Update a tour
@@ -259,65 +78,7 @@ router.put('/:id', [
   body('title').optional().isString().isLength({ max: 255 }),
   body('description').optional().isString().isLength({ max: 2000 }),
   handleValidationErrors
-], async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
-    const userId = req.user.$id;
-
-    // Parse tags if it's a string
-    if (updateData.tags && typeof updateData.tags === 'string') {
-      try {
-        updateData.tags = JSON.parse(updateData.tags);
-      } catch (e) {
-        // If JSON parsing fails, treat as comma-separated string
-        updateData.tags = updateData.tags.split(',').map(tag => tag.trim());
-      }
-    }
-
-    // Handle thumbnail upload if provided
-    if (req.file) {
-      const uploadResult = await CloudinaryService.uploadImage(
-        req.file.buffer,
-        'tour',
-        userId,
-        req.file.originalname
-      );
-
-      if (uploadResult.success) {
-        // Add thumbnail URL to update data
-
-    //  if (!updateData.metadata) updateData.metadata = {};
-        updateData.thumbnailUrl = uploadResult.url;
-      } else {
-        return res.status(500).json({
-          success: false,
-          error: 'Failed to upload thumbnail: ' + uploadResult.error
-        });
-      }
-    }
-
-    const result = await TourService.updateTour(id, updateData, userId);
-
-    if (result.success) {
-      res.json({
-        success: true,
-        data: result
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('Error in PUT /api/tours/:id:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
+], tourController.updateTour);
 
 /**
  * DELETE /api/tours/:id - Delete a tour
@@ -326,32 +87,7 @@ router.delete('/:id', [
   authMiddleware.protect,
   param('id').isString().notEmpty(),
   handleValidationErrors
-], async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user.$id;
-    
-    const result = await TourService.deleteTour(id, userId);
-    
-    if (result.success) {
-      res.json({
-        success: true,
-        data: { success: true }
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('Error in DELETE /api/tours/:id:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
+], tourController.deleteTour);
 
 /**
  * PUT /api/tours/:id/publish - Publish a tour
@@ -360,32 +96,7 @@ router.put('/:id/publish', [
   authMiddleware.protect,
   param('id').isString().notEmpty(),
   handleValidationErrors
-], async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user.$id;
-    
-    const result = await TourService.toggleTourPublish(id, true, userId);
-    
-    if (result.success) {
-      res.json({
-        success: true,
-        data: result
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('Error in PUT /api/tours/:id/publish:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
+], tourController.publishTour);
 
 /**
  * PUT /api/tours/:id/unpublish - Unpublish a tour
@@ -394,32 +105,7 @@ router.put('/:id/unpublish', [
   authMiddleware.protect,
   param('id').isString().notEmpty(),
   handleValidationErrors
-], async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user.$id;
-    
-    const result = await TourService.toggleTourPublish(id, false, userId);
-    
-    if (result.success) {
-      res.json({
-        success: true,
-        data: result
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('Error in PUT /api/tours/:id/unpublish:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
+], tourController.unpublishTour);
 
 // Error handling middleware for upload errors
 router.use(handleUploadError);

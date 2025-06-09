@@ -1,17 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { body, param, query, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 const authMiddleware = require('../middleware/auth');
 const { uploadSingle, handleUploadError } = require('../middleware/upload');
-const CloudinaryService = require('../services/cloudinary.service');
-const { databases, databaseId: DATABASE_ID } = require('../config/appwrite');
-const { Query } = require('node-appwrite');
+const sceneController = require('../controllers/scene.controller');
 
-const COLLECTIONS = {
-  TOURS: '68438aa8003143e4d330',
-  SCENES: '68438e900010d9797e48',
-  HOTSPOTS: '684390750026a2e5e2b8'
-};
+
 
 // Validation middleware
 const handleValidationErrors = (req, res, next) => {
@@ -41,85 +35,7 @@ router.post('/', [
   body('yaw').optional(),
   body('hfov').optional(),
   handleValidationErrors
-], async (req, res) => {
-  try {
-    const { tourId, title, description, order, panoramaUrl, pitch, yaw, hfov } = req.body;
-    const userId = req.user.$id;
-    let imageUrl = panoramaUrl;
-
-    // Parse form data fields to proper types
-    const parsedOrder = order ? parseInt(order) : 0;
-    const parsedPitch = pitch ? parseFloat(pitch) : 0;
-    const parsedYaw = yaw ? parseFloat(yaw) : 0;
-    const parsedHfov = hfov ? parseFloat(hfov) : 100;
-
-    console.log('Parsed scene data:', {
-      order: parsedOrder,
-      pitch: parsedPitch,
-      yaw: parsedYaw,
-      hfov: parsedHfov
-    });
-
-    // Verify tour ownership
-    const tour = await databases.getDocument(DATABASE_ID, COLLECTIONS.TOURS, tourId);
-    if (tour.authorId !== userId) {
-      return res.status(403).json({
-        success: false,
-        error: 'Unauthorized: You can only add scenes to your own tours'
-      });
-    }
-
-    // Handle image upload if provided
-    if (req.file) {
-      const uploadResult = await CloudinaryService.uploadImage(
-        req.file.buffer,
-        'scene',
-        userId,
-        req.file.originalname
-      );
-
-      if (uploadResult.success) {
-        imageUrl = uploadResult.url;
-      } else {
-        return res.status(500).json({
-          success: false,
-          error: 'Failed to upload image: ' + uploadResult.error
-        });
-      }
-    }
-    
-    //console.log('Creating scene with order:', sceneOrder , typeof sceneOrder);
-
-    // Create scene
-    const scene = await databases.createDocument(
-      DATABASE_ID,
-      COLLECTIONS.SCENES,
-      'unique()',
-      {
-        tourId,
-        title,
-        description: description || '',
-        order: parsedOrder,
-        imageUrl: imageUrl || '',
-        authorId: userId,
-        pitch: parsedPitch,
-        yaw: parsedYaw,
-        hfov: parsedHfov
-      }
-    );
-
-    res.status(201).json({
-      success: true,
-      data: { scene }
-    });
-  } catch (error) {
-    console.error('Error in POST /api/scenes:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
+], sceneController.createScene);
 
 /**
  * GET /api/scenes/:id - Get a single scene by ID
@@ -127,24 +43,7 @@ router.post('/', [
 router.get('/:id', [
   param('id').isString().notEmpty(),
   handleValidationErrors
-], async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const scene = await databases.getDocument(DATABASE_ID, COLLECTIONS.SCENES, id);
-    
-    res.json({
-      success: true,
-      data: { scene }
-    });
-  } catch (error) {
-    console.error('Error in GET /api/scenes/:id:', error);
-    res.status(404).json({
-      success: false,
-      error: 'Scene not found'
-    });
-  }
-});
+], sceneController.getSceneById);
 
 /**
  * PUT /api/scenes/:id - Update a scene
@@ -161,74 +60,7 @@ router.put('/:id', [
   body('yaw').optional(),
   body('hfov').optional(),
   handleValidationErrors
-], async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { title, description, order, panoramaUrl, pitch, yaw, hfov } = req.body;
-    const userId = req.user.$id;
-
-    // Verify scene ownership
-    const existingScene = await databases.getDocument(DATABASE_ID, COLLECTIONS.SCENES, id);
-    if (existingScene.authorId !== userId) {
-      return res.status(403).json({
-        success: false,
-        error: 'Unauthorized: You can only update your own scenes'
-      });
-    }
-
-    // Parse form data fields to proper types
-    const parsedOrder = order ? parseInt(order) : 0;
-    const parsedPitch = pitch ? parseFloat(pitch) : 0;
-    const parsedYaw = yaw ? parseFloat(yaw) : 0;
-    const parsedHfov = hfov ? parseFloat(hfov) : 100;
-
-    const updatePayload = {};
-    if (title) updatePayload.title = title;
-    if (description !== undefined) updatePayload.description = description;
-    if (order !== undefined) updatePayload.order = parsedOrder;
-    if (panoramaUrl) updatePayload.imageUrl = panoramaUrl;
-    if (pitch !== undefined) updatePayload.pitch = parsedPitch;
-    if (yaw !== undefined) updatePayload.yaw = parsedYaw;
-    if (hfov !== undefined) updatePayload.hfov = parsedHfov;
-
-    // Handle image upload if provided
-    if (req.file) {
-      const uploadResult = await CloudinaryService.uploadImage(
-        req.file.buffer,
-        'scene',
-        userId,
-        req.file.originalname
-      );
-
-      if (uploadResult.success) {
-        updatePayload.imageUrl = uploadResult.url;
-      } else {
-        return res.status(500).json({
-          success: false,
-          error: 'Failed to upload image: ' + uploadResult.error
-        });
-      }
-    }
-
-    const scene = await databases.updateDocument(
-      DATABASE_ID,
-      COLLECTIONS.SCENES,
-      id,
-      updatePayload
-    );
-
-    res.json({
-      success: true,
-      data: { scene }
-    });
-  } catch (error) {
-    console.error('Error in PUT /api/scenes/:id:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
+], sceneController.updateScene);
 
 /**
  * DELETE /api/scenes/:id - Delete a scene
@@ -237,48 +69,7 @@ router.delete('/:id', [
   authMiddleware.protect,
   param('id').isString().notEmpty(),
   handleValidationErrors
-], async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user.$id;
-
-    // Verify scene ownership
-    const existingScene = await databases.getDocument(DATABASE_ID, COLLECTIONS.SCENES, id);
-    if (existingScene.authorId !== userId) {
-      return res.status(403).json({
-        success: false,
-        error: 'Unauthorized: You can only delete your own scenes'
-      });
-    }
-
-    // Delete associated hotspots first
-    const hotspots = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.HOTSPOTS,
-      [Query.equal('sceneId', id)]
-    );
-
-    await Promise.all(
-      hotspots.documents.map(hotspot =>
-        databases.deleteDocument(DATABASE_ID, COLLECTIONS.HOTSPOTS, hotspot.$id)
-      )
-    );
-
-    // Delete the scene
-    await databases.deleteDocument(DATABASE_ID, COLLECTIONS.SCENES, id);
-
-    res.json({
-      success: true,
-      data: { message: 'Scene deleted successfully' }
-    });
-  } catch (error) {
-    console.error('Error in DELETE /api/scenes/:id:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
+], sceneController.deleteScene);
 
 // Error handling middleware for upload errors
 router.use(handleUploadError);
