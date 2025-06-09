@@ -157,11 +157,14 @@ router.put('/:id', [
   body('description').optional().isString().isLength({ max: 1000 }),
   body('order').optional(),
   body('panoramaUrl').optional(),
+  body('pitch').optional(),
+  body('yaw').optional(),
+  body('hfov').optional(),
   handleValidationErrors
 ], async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, order, panoramaUrl } = req.body;
+    const { title, description, order, panoramaUrl, pitch, yaw, hfov } = req.body;
     const userId = req.user.$id;
 
     // Verify scene ownership
@@ -173,11 +176,20 @@ router.put('/:id', [
       });
     }
 
+    // Parse form data fields to proper types
+    const parsedOrder = order ? parseInt(order) : 0;
+    const parsedPitch = pitch ? parseFloat(pitch) : 0;
+    const parsedYaw = yaw ? parseFloat(yaw) : 0;
+    const parsedHfov = hfov ? parseFloat(hfov) : 100;
+
     const updatePayload = {};
     if (title) updatePayload.title = title;
     if (description !== undefined) updatePayload.description = description;
-    if (order !== undefined) updatePayload.order = order;
-    if (panoramaUrl) updatePayload.panoramaUrl = panoramaUrl;
+    if (order !== undefined) updatePayload.order = parsedOrder;
+    if (panoramaUrl) updatePayload.imageUrl = panoramaUrl;
+    if (pitch !== undefined) updatePayload.pitch = parsedPitch;
+    if (yaw !== undefined) updatePayload.yaw = parsedYaw;
+    if (hfov !== undefined) updatePayload.hfov = parsedHfov;
 
     // Handle image upload if provided
     if (req.file) {
@@ -189,7 +201,7 @@ router.put('/:id', [
       );
 
       if (uploadResult.success) {
-        updatePayload.panoramaUrl = uploadResult.url;
+        updatePayload.imageUrl = uploadResult.url;
       } else {
         return res.status(500).json({
           success: false,
