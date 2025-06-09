@@ -35,14 +35,30 @@ router.post('/', [
   body('tourId').isString().notEmpty(),
   body('title').isString().notEmpty().isLength({ max: 255 }),
   body('description').optional().isString().isLength({ max: 1000 }),
-  body('order').optional().isInt({ min: 0 }),
-  body('panoramaUrl').optional().isURL(),
+  body('order').optional(),
+  body('panoramaUrl').optional(),
+  body('pitch').optional(),
+  body('yaw').optional(),
+  body('hfov').optional(),
   handleValidationErrors
 ], async (req, res) => {
   try {
-    const { tourId, title, description, order, panoramaUrl } = req.body;
-    const userId = req.userId;
+    const { tourId, title, description, order, panoramaUrl, pitch, yaw, hfov } = req.body;
+    const userId = req.user.$id;
     let imageUrl = panoramaUrl;
+
+    // Parse form data fields to proper types
+    const parsedOrder = order ? parseInt(order) : 0;
+    const parsedPitch = pitch ? parseFloat(pitch) : 0;
+    const parsedYaw = yaw ? parseFloat(yaw) : 0;
+    const parsedHfov = hfov ? parseFloat(hfov) : 100;
+
+    console.log('Parsed scene data:', {
+      order: parsedOrder,
+      pitch: parsedPitch,
+      yaw: parsedYaw,
+      hfov: parsedHfov
+    });
 
     // Verify tour ownership
     const tour = await databases.getDocument(DATABASE_ID, COLLECTIONS.TOURS, tourId);
@@ -71,6 +87,8 @@ router.post('/', [
         });
       }
     }
+    
+    //console.log('Creating scene with order:', sceneOrder , typeof sceneOrder);
 
     // Create scene
     const scene = await databases.createDocument(
@@ -81,9 +99,12 @@ router.post('/', [
         tourId,
         title,
         description: description || '',
-        order: order || 0,
-        panoramaUrl: imageUrl || '',
-        authorId: userId
+        order: parsedOrder,
+        imageUrl: imageUrl || '',
+        authorId: userId,
+        pitch: parsedPitch,
+        yaw: parsedYaw,
+        hfov: parsedHfov
       }
     );
 
@@ -134,14 +155,14 @@ router.put('/:id', [
   param('id').isString().notEmpty(),
   body('title').optional().isString().isLength({ max: 255 }),
   body('description').optional().isString().isLength({ max: 1000 }),
-  body('order').optional().isInt({ min: 0 }),
-  body('panoramaUrl').optional().isURL(),
+  body('order').optional(),
+  body('panoramaUrl').optional(),
   handleValidationErrors
 ], async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, order, panoramaUrl } = req.body;
-    const userId = req.userId;
+    const userId = req.user.$id;
 
     // Verify scene ownership
     const existingScene = await databases.getDocument(DATABASE_ID, COLLECTIONS.SCENES, id);
@@ -207,7 +228,7 @@ router.delete('/:id', [
 ], async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.userId;
+    const userId = req.user.$id;
 
     // Verify scene ownership
     const existingScene = await databases.getDocument(DATABASE_ID, COLLECTIONS.SCENES, id);
