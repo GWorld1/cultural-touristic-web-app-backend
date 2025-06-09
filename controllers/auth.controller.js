@@ -37,6 +37,7 @@ async register (req, res) {
         name: name,
         phone: phone || '',
         role: 'user',
+        bio: '',
         createdAt: new Date().toISOString()
       }
     );
@@ -67,7 +68,7 @@ async register (req, res) {
 async login (req, res) {
   try {
     const { email, password } = req.body;
-
+    console.log('Login request body:', req.body);
     // Validate input
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -80,10 +81,10 @@ async login (req, res) {
     // Get user account
     let user = await users.get(session.userId);
   
-    // Check if user is verified
-    if (!user.emailVerification) {
-      return res.status(401).json({ error: 'Email not verified' });
-    }
+    // // Check if user is verified
+    // if (!user.emailVerification) {
+    //   return res.status(401).json({ error: 'Email not verified' });
+    // }
     
     console.log('User:', user);
     // Get user data from database
@@ -162,13 +163,16 @@ async getCurrentUser (req, res)  {
       [Query.equal('userId', user.$id)]
     );
 
+    console.log('User data:', userData);
+
     res.json({
       user: {
         id: user.$id,
         email: user.email,
-        name: user.name,
+        name: userData.documents[0]?.name,
         phone: userData.documents[0]?.phone || '',
-        role: userData.documents[0]?.role || 'user'
+        role: userData.documents[0]?.role || 'user',
+        bio: userData.documents[0]?.bio || ''
       }
     });
   } catch (error) {
@@ -238,19 +242,20 @@ async verifyEmail (req, res) {
 // Update user profile
 updateProfile: async (req, res) => {
   try {
-    const { name, phone } = req.body;
-    const user = await account.get();
+    const { name, phone, bio } = req.body;
+    console.log('Update profile request body:', req.body); // Log the request body for debugging purposes     // Get user account from Appwrite
+    //const user = await account.get();
     
-    // Update name in Appwrite account if provided
-    if (name) {
-      await account.updateName(name);
-    }
+    // // Update name in Appwrite account if provided
+    // if (name) {
+    //   await account.updateName(name);
+    // }
     
     // Get user data from database
     const userData = await databases.listDocuments(
       databaseId,
       usersCollectionId,
-      [Query.equal('userId', user.$id)]
+      [Query.equal('userId', req.user.$id)] // Use the user ID from the request instead of the user ID from Appwrite account. This is to ensure that the user can only update their own profile.
     );
     
     if (userData.documents.length > 0) {
@@ -261,7 +266,8 @@ updateProfile: async (req, res) => {
         userData.documents[0].$id,
         {
           name: name || userData.documents[0].name,
-          phone: phone || userData.documents[0].phone
+          phone: phone || userData.documents[0].phone,
+          bio: bio || userData.documents[0].bio,
         }
       );
     }

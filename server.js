@@ -17,6 +17,7 @@ const imageRoutes = require('./routes/image.routes');
 const tourRoutes = require('./routes/tour.routes');
 const sceneRoutes = require('./routes/scene.routes');
 const hotspotRoutes = require('./routes/hotspot.routes');
+const postRoutes = require('./routes/post.routes');
 
 // Use routes
 app.use('/api/auth', authRouter);
@@ -25,6 +26,7 @@ app.use('/api/images', imageRoutes);
 app.use('/api/tours', tourRoutes);
 app.use('/api/scenes', sceneRoutes);
 app.use('/api/hotspots', hotspotRoutes);
+app.use('/api/posts', postRoutes);
 
 // Root route
 app.get('/', (req, res) => {

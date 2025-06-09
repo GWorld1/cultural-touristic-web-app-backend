@@ -24,12 +24,15 @@ router.get('/:id', async (req, res) => {
 
 // Update user
 router.put('/:id', async (req, res) => {
+
+  const { name, phone, bio } = req.body;
+  console.log('Update user request body:', req.body); // Log the request body for debugging purposes
   try {
     const updatedUser = await databases.updateDocument(
       databaseId,
       collectionId,
       req.params.id,
-      req.body
+      { name, phone, bio }
     );
     res.json(updatedUser);
   } catch (error) {
