@@ -108,12 +108,12 @@ const authMiddleware = {
 
         // Get current user from Appwrite
         try {
-          // Check if session is valid in Appwrite
-          const currentUser = await account.get();
+          // // Check if session is valid in Appwrite
+          // const currentUser = await account.get();
           
           // Attach user info to request
           req.user = {
-            userId: decoded.userId,
+            $id: decoded.userId,
             email: decoded.email,
             role: decoded.role
           };

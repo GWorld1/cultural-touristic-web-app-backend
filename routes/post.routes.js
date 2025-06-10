@@ -68,7 +68,7 @@ router.put('/:id', [
   authMiddleware.protect,
   param('id').isString().notEmpty().withMessage('Post ID is required'),
   body('caption').optional().isString().isLength({ max: 2000 }).withMessage('Caption must be less than 2000 characters'),
-  body('location').optional().isJSON().withMessage('Location must be valid JSON'),
+  body('location').optional().isObject().withMessage('Location must be valid JSON'),
   body('tags').optional().isArray({ max: 10 }).withMessage('Tags must be an array with maximum 10 items'),
   body('isPublic').optional().isBoolean().withMessage('isPublic must be a boolean'),
   handleValidationErrors
