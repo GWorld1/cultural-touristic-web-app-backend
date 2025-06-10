@@ -29,8 +29,8 @@ router.post('/', [
   authMiddleware.protect,
   uploadSingle('image'),
   body('caption').isString().notEmpty().isLength({ max: 2000 }).withMessage('Caption is required and must be less than 2000 characters'),
-  body('location').optional().isJSON().withMessage('Location must be valid JSON'),
-  body('tags').optional().isArray({ max: 10 }).withMessage('Tags must be an array with maximum 10 items'),
+  body('location').optional().isString().withMessage('Location must be valid JSON'),
+  body('tags').optional().isString().withMessage('Tags must be an array with maximum 10 items'),
   body('isPublic').optional().isBoolean().withMessage('isPublic must be a boolean'),
   handleValidationErrors
 ], postController.createPost);

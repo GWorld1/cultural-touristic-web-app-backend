@@ -36,9 +36,37 @@ const postController = {
         });
       }
 
+      //Parse tags and location of provided
+      let parseLocation = null;
+      let parseTags = [];
+      let parseIsPublic = isPublic === 'true' ? true : false;
+
+      if (location) {
+        try {
+          parseLocation = typeof location === 'string' ? JSON.parse(location) : location;
+        } catch (error) {
+          console.error('Invalid location data:', error);
+          parseLocation = null;
+        }
+      }
+
+      if (tags) {
+        try {
+          parseTags = Array.isArray(tags) ? tags : JSON.parse(tags);
+          parseTags = parseTags.slice(0, 10).filter(tag => 
+            typeof tag === 'string' && tag.length > 0 && tag.length <= 50
+          );
+        } catch (error) {
+          console.error('Invalid tags data:', error);
+          parseTags = [];
+        }
+      }
+
+      
+
       // Create post using service
       const result = await PostService.createPost(
-        { caption, location, tags, isPublic },
+        { caption, location: parseLocation, tags: parseTags, isPublic: parseIsPublic },
         userId,
         req.file
       );
