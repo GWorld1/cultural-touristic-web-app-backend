@@ -186,6 +186,98 @@ const postController = {
   },
 
   /**
+   * Search posts by tags and location
+   */
+  async searchPosts(req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = Math.min(parseInt(req.query.limit) || 20, 50); // Max 50 posts per page
+      const currentUserId = req.user?.$id || null;
+
+      // Parse search parameters
+      const searchParams = {};
+
+      // Handle tags parameter
+      if (req.query.tags) {
+        try {
+          // Try to parse as JSON array first
+          if (req.query.tags.startsWith('[')) {
+            searchParams.tags = JSON.parse(req.query.tags);
+          } else {
+            // Treat as comma-separated string
+            searchParams.tags = req.query.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+          }
+        } catch (error) {
+          console.error('Invalid tags format:', error);
+          searchParams.tags = [];
+        }
+      }
+
+      // Handle location parameters
+      if (req.query.location) {
+        searchParams.location = req.query.location.trim();
+      }
+      if (req.query.city) {
+        searchParams.city = req.query.city.trim();
+      }
+      if (req.query.country) {
+        searchParams.country = req.query.country.trim();
+      }
+
+      // Handle sort parameter
+      if (req.query.sortBy) {
+        searchParams.sortBy = req.query.sortBy;
+      }
+
+      // Validate pagination parameters
+      if (page < 1) {
+        return res.status(400).json({
+          success: false,
+          error: 'Page number must be greater than 0'
+        });
+      }
+
+      if (limit < 1) {
+        return res.status(400).json({
+          success: false,
+          error: 'Limit must be greater than 0'
+        });
+      }
+
+      // Validate that at least one search parameter is provided
+      if (!searchParams.tags?.length && !searchParams.location && !searchParams.city && !searchParams.country) {
+        return res.status(400).json({
+          success: false,
+          error: 'At least one search parameter (tags, location, city, or country) must be provided'
+        });
+      }
+
+      // Search posts using service
+      const result = await PostService.searchPosts(searchParams, page, limit, currentUserId);
+
+      if (result.success) {
+        res.json({
+          success: true,
+          data: result.data
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: result.error,
+          details: result.details
+        });
+      }
+    } catch (error) {
+      console.error('Search posts error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to search posts',
+        details: error.message
+      });
+    }
+  },
+
+  /**
    * Update post
    */
   async updatePost(req, res) {

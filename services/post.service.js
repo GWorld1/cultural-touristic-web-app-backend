@@ -308,6 +308,173 @@ class PostService {
   }
 
   /**
+   * Search posts by tags and location with pagination
+   * @param {Object} searchParams - Search parameters
+   * @param {number} page - Page number
+   * @param {number} limit - Posts per page
+   * @param {string} userId - Current user ID (optional)
+   * @returns {Promise<Object>} Search results
+   */
+  static async searchPosts(searchParams = {}, page = 1, limit = 20, userId = null) {
+    try {
+      const offset = (page - 1) * limit;
+      const { tags, location, city, country, sortBy = 'newest' } = searchParams;
+
+      // Build base query filters
+      const queries = [
+        Query.equal('status', 'published'),
+        Query.equal('isPublic', true),
+        Query.limit(limit),
+        Query.offset(offset)
+      ];
+
+      // Add sorting
+      switch (sortBy) {
+        case 'oldest':
+          queries.push(Query.orderAsc('$createdAt'));
+          break;
+        case 'popular':
+          queries.push(Query.orderDesc('likesCount'));
+          break;
+        case 'newest':
+        default:
+          queries.push(Query.orderDesc('$createdAt'));
+          break;
+      }
+
+      // Handle tag filtering
+      if (tags && tags.length > 0) {
+        // For each tag, we need to check if it exists in the tags array
+        // Since Appwrite doesn't have a direct "contains any" for arrays,
+        // we'll use Query.contains for each tag
+        tags.forEach(tag => {
+          if (tag && tag.trim()) {
+            queries.push(Query.contains('tags', tag.trim()));
+          }
+        });
+      }
+
+      // Get posts with base filters
+      const postsResponse = await databases.listDocuments(
+        DATABASE_ID,
+        postsCollectionId,
+        queries
+      );
+
+      // Filter by location if specified (since location is stored as JSON string)
+      let filteredPosts = postsResponse.documents;
+
+      if (location || city || country) {
+        filteredPosts = postsResponse.documents.filter(post => {
+          if (!post.location) return false;
+
+          try {
+            const postLocation = JSON.parse(post.location);
+
+            // Check location name match
+            if (location && postLocation.name) {
+              const locationMatch = postLocation.name.toLowerCase().includes(location.toLowerCase());
+              if (!locationMatch) return false;
+            }
+
+            // Check city match
+            if (city && postLocation.city) {
+              const cityMatch = postLocation.city.toLowerCase().includes(city.toLowerCase());
+              if (!cityMatch) return false;
+            }
+
+            // Check country match
+            if (country && postLocation.country) {
+              const countryMatch = postLocation.country.toLowerCase().includes(country.toLowerCase());
+              if (!countryMatch) return false;
+            }
+
+            return true;
+          } catch (error) {
+            console.error('Error parsing location for post:', post.$id, error);
+            return false;
+          }
+        });
+      }
+
+      // Get author information for each filtered post
+      const postsWithAuthors = await Promise.all(
+        filteredPosts.map(async (post) => {
+          try {
+            // Get author data
+            const authorResponse = await databases.listDocuments(
+              DATABASE_ID,
+              usersCollectionId,
+              [Query.equal('userId', post.authorId)]
+            );
+
+            const author = authorResponse.documents[0] || null;
+
+            // Parse JSON fields
+            const location = post.location ? JSON.parse(post.location) : null;
+            const imageMetadata = post.imageMetadata ? JSON.parse(post.imageMetadata) : null;
+
+            return {
+              ...post,
+              location,
+              imageMetadata,
+              author: author ? {
+                id: author.userId,
+                name: author.name,
+                email: author.email
+              } : null
+            };
+          } catch (error) {
+            console.error('Error fetching author for post:', post.$id, error);
+            return {
+              ...post,
+              location: post.location ? JSON.parse(post.location) : null,
+              imageMetadata: post.imageMetadata ? JSON.parse(post.imageMetadata) : null,
+              author: null
+            };
+          }
+        })
+      );
+
+      // Calculate pagination for filtered results
+      const total = filteredPosts.length;
+      const totalPages = Math.ceil(total / limit);
+
+      // Apply pagination to filtered results
+      const paginatedPosts = postsWithAuthors.slice(0, limit);
+
+      return {
+        success: true,
+        data: {
+          posts: paginatedPosts,
+          pagination: {
+            page: page,
+            limit: limit,
+            total: total,
+            totalPages: totalPages,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1
+          },
+          searchParams: {
+            tags: tags || [],
+            location: location || null,
+            city: city || null,
+            country: country || null,
+            sortBy: sortBy
+          }
+        }
+      };
+    } catch (error) {
+      console.error('Search posts error:', error);
+      return {
+        success: false,
+        error: 'Failed to search posts',
+        details: error.message
+      };
+    }
+  }
+
+  /**
    * Update post
    * @param {string} postId - Post ID
    * @param {Object} updateData - Data to update

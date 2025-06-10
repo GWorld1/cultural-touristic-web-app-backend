@@ -49,6 +49,23 @@ router.get('/', [
 ], postController.getPostsFeed);
 
 /**
+ * @route   GET /api/posts/search
+ * @desc    Search posts by tags and location
+ * @access  Public (optional authentication)
+ */
+router.get('/search', [
+  authMiddleware.optional,
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+  query('limit').optional().isInt({ min: 1, max: 50 }).withMessage('Limit must be between 1 and 50'),
+  query('tags').optional().isString().withMessage('Tags must be a comma-separated string or JSON array'),
+  query('location').optional().isString().withMessage('Location must be a string'),
+  query('city').optional().isString().withMessage('City must be a string'),
+  query('country').optional().isString().withMessage('Country must be a string'),
+  query('sortBy').optional().isIn(['newest', 'oldest', 'popular']).withMessage('Sort by must be newest, oldest, or popular'),
+  handleValidationErrors
+], postController.searchPosts);
+
+/**
  * @route   GET /api/posts/:id
  * @desc    Get single post by ID
  * @access  Public (optional authentication)
