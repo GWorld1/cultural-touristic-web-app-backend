@@ -6,6 +6,7 @@
   "author": "GWorld1",
   "type": "commonjs",
   "main": "index.js",
+  "keywords": [],
   "scripts": {
     "test": "jest --detectOpenHandles",
     "start": "node server.js",
