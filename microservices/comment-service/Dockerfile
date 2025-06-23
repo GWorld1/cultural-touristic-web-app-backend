@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -23,6 +23,6 @@ USER nodejs
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:${COMMENT_SERVICE_PORT}/health || exit 1
 
-EXPOSE 3001
+EXPOSE 3004
 
 CMD ["npm", "start"]
