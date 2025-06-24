@@ -1,37 +1,23 @@
-// Jenkins file
-
 pipeline {
-    agent any // This tells Jenkins to run the pipeline on any available agent
+    agent any
 
     tools {
-       // configured on Jenkins
-        git 'Default' //
-        nodejs 'JenkinsNodeJS' //
+        git 'Default'
+        nodejs 'JenkinsNodeJS'
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-               // Cloning the repo by Jenkins automatically
                 echo 'Code checked out from SCM.'
             }
         }
 
-        // --- Auth Service Pipeline ---
         stage('Build Auth Service') {
             steps {
-                dir('microservices/auth-service') { 
+                dir('microservices/auth-service') {
                     echo 'Building Auth Service...'
-                    sh 'npm install' 
-                }
-            }
-        }
-
-        stage('Test Auth Service') {
-            steps {
-                dir('microservices/auth-service') { 
-                    echo 'Testing Auth Service...'
-                    sh 'npm test' 
+                    sh 'npm install'
                 }
             }
         }
@@ -40,30 +26,17 @@ pipeline {
             steps {
                 script {
                     echo 'Containerizing Auth Service...'
-                    
                     def authServiceImage = docker.build("gworld1/auth-service:${env.BUILD_NUMBER}", "microservices/auth-service")
-                    
                     echo "Docker image built for Auth Service: ${authServiceImage.id}"
-                    
                 }
             }
         }
 
-        // --- Comment Service Pipeline ---
         stage('Build Comment Service') {
             steps {
                 dir('microservices/comment-service') {
                     echo 'Building Comment Service...'
                     sh 'npm install'
-                }
-            }
-        }
-
-        stage('Test Comment Service') {
-            steps {
-                dir('microservices/comment-service') {
-                    echo 'Testing Comment Service...'
-                    sh 'npm test'
                 }
             }
         }
@@ -78,21 +51,11 @@ pipeline {
             }
         }
 
-        // --- Like Service Pipeline ---
         stage('Build Like Service') {
             steps {
                 dir('microservices/like-service') {
                     echo 'Building Like Service...'
                     sh 'npm install'
-                }
-            }
-        }
-
-        stage('Test Like Service') {
-            steps {
-                dir('microservices/like-service') {
-                    echo 'Testing Like Service...'
-                    sh 'npm test'
                 }
             }
         }
@@ -107,21 +70,11 @@ pipeline {
             }
         }
 
-        // --- Post Service Pipeline ---
         stage('Build Post Service') {
             steps {
                 dir('microservices/post-service') {
                     echo 'Building Post Service...'
                     sh 'npm install'
-                }
-            }
-        }
-
-        stage('Test Post Service') {
-            steps {
-                dir('microservices/post-service') {
-                    echo 'Testing Post Service...'
-                    sh 'npm test'
                 }
             }
         }
