@@ -39,8 +39,8 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.POST_SERVICE_PORT || 3002;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Post service running on port ${PORT}`);
 });
 
-module.exports = app;
+module.exports = server; 
