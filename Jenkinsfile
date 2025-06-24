@@ -37,7 +37,7 @@ pipeline {
                 ]) {
                     dir('microservices/auth-service') {
                         echo 'Running tests for Auth Service...'
-                        sh 'npx test' // This runs the 'test' script defined in package.json
+                        sh 'npx jest' // This runs the 'test' script defined in package.json
                     }
                 }
             }
@@ -77,7 +77,7 @@ pipeline {
                 ]) {
                     dir('microservices/comment-service') {
                         echo 'Running tests for Comment Service...'
-                        sh 'npx test'
+                        sh 'npx jest'
                     }
                 }
             }
@@ -115,7 +115,7 @@ pipeline {
                 ]) {
                     dir('microservices/like-service') {
                         echo 'Running tests for Like Service...'
-                        sh 'npx test'
+                        sh 'npx jest'
                     }
                 }
             }
@@ -153,7 +153,7 @@ pipeline {
                 ]) {
                     dir('microservices/post-service') {
                         echo 'Running tests for Post Service...'
-                        sh 'npx test'
+                        sh 'npx jest'
                     }
                 }
             }
