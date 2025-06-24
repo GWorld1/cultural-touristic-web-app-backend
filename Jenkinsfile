@@ -96,6 +96,7 @@ pipeline {
 
                             // Step 2: Update the image tag in the Deployment manifest locally
                             echo "Updating image in ${deploymentManifestPath} to ${serviceImage}..."
+                            sh 'yq --version' // <--- ADD THIS LINE
                             // sh "yq e '.spec.template.spec.containers[] | select(.name == \"auth-service\").image = \"${serviceImage}\"' -i ${deploymentManifestPath}"
                             echo "Image updated in local manifest."
 
