@@ -37,7 +37,7 @@ pipeline {
                 ]) {
                     dir('microservices/auth-service') {
                         echo 'Running tests for Auth Service...'
-                        sh 'npm test' // This runs the 'test' script defined in package.json
+                        sh 'npx test' // This runs the 'test' script defined in package.json
                     }
                 }
             }
