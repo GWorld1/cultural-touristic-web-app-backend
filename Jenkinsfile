@@ -103,7 +103,7 @@ pipeline {
                             // Ensure the 'name' of your container in the 'auth-service-deployment.yaml'
                             // matches 'auth-service-container' or adjust the yq path accordingly.
                             echo "Updating image in ${deploymentManifestPath} to ${serviceImage}..."
-                            sh "yq e '.spec.template.spec.containers[] | select(.name == \"auth-service-container\").image = \"${serviceImage}\"' -i ${deploymentManifestPath}"
+                            sh "yq e '.spec.template.spec.containers[] | select(.name == \"auth-service\").image = \"${serviceImage}\"' -i ${deploymentManifestPath}"
                             // If your container has a different name, replace "auth-service-container"
                             // If it's the first and only container, you can use:
                             // sh "yq e '.spec.template.spec.containers[0].image = \"${serviceImage}\"' -i ${deploymentManifestPath}"
