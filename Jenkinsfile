@@ -77,7 +77,7 @@ pipeline {
                 ]) {
                     dir('microservices/comment-service') {
                         echo 'Running tests for Comment Service...'
-                        sh 'npm test'
+                        sh 'npx test'
                     }
                 }
             }
@@ -115,7 +115,7 @@ pipeline {
                 ]) {
                     dir('microservices/like-service') {
                         echo 'Running tests for Like Service...'
-                        sh 'npm test'
+                        sh 'npx test'
                     }
                 }
             }
@@ -153,7 +153,7 @@ pipeline {
                 ]) {
                     dir('microservices/post-service') {
                         echo 'Running tests for Post Service...'
-                        sh 'npm test'
+                        sh 'npx test'
                     }
                 }
             }
