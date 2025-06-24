@@ -1,8 +1,8 @@
 const request = require('supertest');
-const server = require('../server'); // Now imports the 'server' instance directly
+const server = require('../server'); 
 
 describe('GET /api/auth/health', () => {
-    // This hook runs after all tests in this describe block have finished
+   
     afterAll((done) => {
         // Close the server and call 'done' when it's fully shut down
         server.close(() => {
@@ -12,8 +12,8 @@ describe('GET /api/auth/health', () => {
     });
 
     it('should return health status', async () => {
-        // Use the 'server' instance with supertest, as it's directly runnable
-        const res = await request(server) // Use 'server' here
+        
+        const res = await request(server) 
             .get('/api/auth/health')
             .expect(200);
     });
