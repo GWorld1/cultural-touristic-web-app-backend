@@ -6,7 +6,7 @@ pipeline {
         nodejs 'JenkinsNodeJS' // Ensure this matches your NodeJS tool configuration name
     }
 
-    stages {
+    stages { // This starts the 'stages' block
         stage('Checkout Code') {
             steps {
                 echo 'Checking out code from SCM.'
@@ -145,8 +145,7 @@ pipeline {
                 }
             }
         }
-
-       
+    } // This is the missing '}' that closes the 'stages' block
 
     post {
         always {
