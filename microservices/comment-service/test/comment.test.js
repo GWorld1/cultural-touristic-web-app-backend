@@ -1,13 +1,20 @@
-  const request = require('supertest');
-  const app = require('../server'); // Adjust path if needed
+const request = require('supertest');
+const server = require('../server'); 
 
-
-
-  // Health Check
-  describe('GET /health', () => {
-    it('should return health status', async () => {
-      const res = await request(app)
-        .get('/health')
-        .expect(200);
+describe('GET /health', () => {
+    
+    afterAll((done) => {
+        // Close the server and call 'done' when it's fully shut down
+        server.close(() => {
+            console.log('Comment service test server closed.');
+            done();
+        });
     });
-  });
+
+    it('should return health status', async () => {
+        
+        const res = await request(server) 
+            .get('/health') 
+            .expect(200);
+    });
+});
