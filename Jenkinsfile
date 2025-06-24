@@ -24,6 +24,17 @@ pipeline {
             }
         }
 
+        stage('Containerize Auth Service') {
+            steps {
+                script {
+                    echo 'Containerizing Auth Service...'
+                    // This assumes Docker is installed and configured on your Jenkins agent.
+                    def authServiceImage = docker.build("gworld1/auth-service:${env.BUILD_NUMBER}", "microservices/auth-service")
+                    echo "Docker image built for Auth Service: ${authServiceImage.id}"
+                }
+            }
+        }
+
         stage('Test Auth Service') {
             steps {
                 // Using Jenkins Credentials to provide environment variables securely
@@ -43,16 +54,7 @@ pipeline {
             }
         }
 
-        stage('Containerize Auth Service') {
-            steps {
-                script {
-                    echo 'Containerizing Auth Service...'
-                    // This assumes Docker is installed and configured on your Jenkins agent.
-                    def authServiceImage = docker.build("gworld1/auth-service:${env.BUILD_NUMBER}", "microservices/auth-service")
-                    echo "Docker image built for Auth Service: ${authServiceImage.id}"
-                }
-            }
-        }
+
 
         // --- Comment Service Stages ---
         stage('Build Comment Service') {
