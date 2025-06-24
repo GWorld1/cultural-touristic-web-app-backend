@@ -38,8 +38,8 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.COMMENT_SERVICE_PORT || 3004;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => { // Capture the server instance here
     console.log(`comment service running on port ${PORT}`);
 });
 
-module.exports = app;
+module.exports = server; 
