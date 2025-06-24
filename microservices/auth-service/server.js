@@ -1,3 +1,4 @@
+const { collectMetric, metricEndpoint } = require('./src/config/prometheus');
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -10,10 +11,12 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(collectMetric); // Collect metrics for all routes
 
 // Import routes
 const authRouter = require('./src/routes/auth.routes');
 const userRoutes = require('./src/routes/user.routes');
+
 
 // Use routes
 app.use('/api/auth', authRouter);
@@ -23,6 +26,8 @@ app.use('/api/users', userRoutes);
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'OK', service: 'auth-service' });
 });
+
+app.get('/metrics', metricEndpoint); // Metrics endpoint
 
 // Route handlers will be imported here
 // app.use('/api/auth', require('./routes/auth'));
