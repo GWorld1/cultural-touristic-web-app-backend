@@ -44,4 +44,4 @@ const server = app.listen(PORT, () => { // Capture the server instance here
     console.log(`Auth service running on port ${PORT}`);
 });
 
-module.exports = server; // <--- Export the server instance now
+module.exports = server; 
