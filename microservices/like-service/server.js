@@ -38,8 +38,8 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.LIKE_SERVICE_PORT || 3003;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => { // Capture the server instance here
     console.log(`like service running on port ${PORT}`);
 });
 
-module.exports = app;
+module.exports = server; 
