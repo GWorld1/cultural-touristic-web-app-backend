@@ -94,11 +94,24 @@ pipeline {
                             """
                             echo "Kubernetes Secret 'auth-service-secrets' created/updated."
 
-                            // Step 2: Update the image tag in the Deployment manifest locally
-                            echo "Updating image in ${deploymentManifestPath} to ${serviceImage}..."
-                            sh 'yq --version' // <--- ADD THIS LINE
-                            // sh "yq e '.spec.template.spec.containers[] | select(.name == \"auth-service\").image = \"${serviceImage}\"' -i ${deploymentManifestPath}"
-                            echo "Image updated in local manifest."
+                            echo "Attempting to update image in ${manifestPath} to ${serviceImage}..."
+                            sh 'yq --version' // Confirmed: yq version v4.44.2
+
+                            // --- CRITICAL: Please UNCOMMENT the line below for ONE run to debug the yq issue ---
+                            // This uses a multi-line string for clearer shell execution.
+                            sh """
+                                yq e '.spec.template.spec.containers[] | select(.name == "auth-service").image = "${serviceImage}"' -i "${manifestPath}"
+                            """
+                            // Re-comment this line after you get the 'cat' output to keep your deployments functional.
+                            echo "Image update attempted (check logs if yq was enabled)."
+
+                            // --- Debugging the manifest content (keep these enabled!) ---
+                            echo "Verifying content of ${manifestPath} after yq attempt, before deployment:"
+                            sh "cat ${manifestPath}"
+                            echo "--- End of ${manifestPath} content ---"
+                            sh "ls -l ${manifestPath}"
+                            // --- End Debugging ---
+
 
                             // --- IMPORTANT DEBUGGING STEPS: Check what kubectl is reading ---
                             echo "Verifying content of ${deploymentManifestPath} before apply..."
