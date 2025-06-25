@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: like-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: like-service
+  template:
+    metadata:
+      labels:
+        app: like-service
+    spec:
+      containers:
+      - name: like-service
+        image: localhost:5000/like-service:latest
+        ports:
+        - containerPort: 3003
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: LIKE_SERVICE_PORT   # <-- Add this
+          value: "3003"            # <-- Add this
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: like-service
+spec:
+  selector:
+    app: like-service
+  ports:
+  - port: 3003
+    targetPort: 3003
+  type: NodePort
