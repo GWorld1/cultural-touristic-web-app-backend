@@ -3,7 +3,7 @@ pipeline {
 
     tools {
         git 'Default'
-        nodejs 'JenkinsNodeJS' 
+        nodejs 'JenkinsNodeJS' // Make sure this matches your NodeJS tool configuration name in Jenkins
     }
 
     stages {
@@ -24,10 +24,20 @@ pipeline {
             }
         }
 
-        
+        stage('Containerize Auth Service') {
+            steps {
+                script {
+                    echo 'Creating Docker image for Auth Service...'
+                    // This builds the image and tags it with the current Jenkins BUILD_NUMBER
+                    def authServiceImage = docker.build("gworld1/auth-service:${env.BUILD_NUMBER}", "microservices/auth-service")
+                    echo "Auth Service Docker image built: ${authServiceImage.id}"
+                }
+            }
+        }
+
         stage('Test Auth Service') {
             steps {
-                // Securely providing environment variables for tests
+                // Securely providing environment variables for tests using Jenkins Credentials
                 withCredentials([
                     string(credentialsId: 'JWT_SECRET_CREDENTIAL', variable: 'JWT_SECRET'),
                     string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT'),
@@ -44,28 +54,19 @@ pipeline {
             }
         }
 
-        
-        stage('Containerize Auth Service') {
-            steps {
-                script {
-                    echo 'Creating Docker image for Auth Service...'
-                    def authServiceImage = docker.build("gworld1/auth-service:${env.BUILD_NUMBER}", "microservices/auth-service")
-                    echo "Auth Service Docker image built: ${authServiceImage.id}"
-                }
-            }
-        }
-
-
         stage('Deploy Auth Service') {
             steps {
                 script {
                     echo 'Deploying Auth Service to Kubernetes on Hostinger VPS...'
 
+                    // Define the new image tag for this build
+                    def serviceImage = "gworld1/auth-service:${env.BUILD_NUMBER}"
                     // Define the path to your combined Deployment and Service manifest
                     def manifestPath = "k8s-manifests/auth-service-deployment.yaml"
 
                     withCredentials([
                         file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG_FILE_PATH'),
+                        // Jenkins credentials for application secrets - these will be used to create K8s Secrets
                         string(credentialsId: 'JWT_SECRET_CREDENTIAL', variable: 'JWT_SECRET_VAL'),
                         string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT_VAL'),
                         string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID_VAL'),
@@ -73,9 +74,11 @@ pipeline {
                         string(credentialsId: 'APPWRITE_DATABASE_ID_CREDENTIAL', variable: 'APPWRITE_DATABASE_ID_VAL'),
                         string(credentialsId: 'APPWRITE_USERS_COLLECTION_ID_CREDENTIAL', variable: 'APPWRITE_USERS_COLLECTION_ID_VAL')
                     ]) {
+                        // Set KUBECONFIG environment variable for kubectl commands to authenticate
                         withEnv(["KUBECONFIG=${KUBECONFIG_FILE_PATH}"]) {
-                            echo "Kubectl is configured."
+                            echo "Kubectl is configured for deployment."
 
+                            // Step 1: Create or Update Kubernetes Secret for Auth Service
                             echo "Creating or updating 'auth-service-secrets' in Kubernetes..."
                             sh """
                                 kubectl create secret generic auth-service-secrets \\
@@ -89,13 +92,38 @@ pipeline {
                             """
                             echo "Kubernetes secret for Auth Service handled."
 
+                            // Step 2: Update the image tag in the Deployment manifest locally using yq
+                            echo "Attempting to update image in ${manifestPath} to ${serviceImage}..."
+                            sh 'yq --version' // Confirmed: yq version v4.44.2
+
+                            // --- DEBUG START: Inspect manifest content BEFORE yq runs ---
+                            echo "--- Manifest content BEFORE yq modification: ---"
+                            sh "cat ${manifestPath}"
+                            echo "--- End of BEFORE yq content ---"
+
+                            // This yq command updates the image tag in your YAML file.
+                            // The multi-line string (sh """...""") is used for better quoting reliability.
+                            sh """
+                                yq e '.spec.template.spec.containers[] | select(.name == "auth-service").image = "${serviceImage}"' -i "${manifestPath}"
+                            """
+
+                            // --- DEBUG END: Inspect manifest content AFTER yq runs, and before kubectl apply ---
+                            echo "--- Manifest content AFTER yq modification: ---"
+                            sh "cat ${manifestPath}"
+                            echo "--- End of AFTER yq content ---"
+                            sh "ls -l ${manifestPath}" // Check file permissions and size after yq
+                            echo "Image update attempted via yq (check logs above for its effect)."
+
+
+                            // Step 3: Apply the Kubernetes manifests to the cluster
                             echo "Applying Auth Service Kubernetes manifests from ${manifestPath}..."
                             sh "kubectl apply -f ${manifestPath}"
                             echo "Auth Service Kubernetes manifests applied."
 
-                            echo "Waiting for Auth Service deployment to roll out..."
+                            // Step 4: Wait for the deployment rollout to complete
+                            echo "Waiting for Auth Service deployment rollout to complete..."
                             sh "kubectl rollout status deployment/auth-service"
-                            echo "Auth Service deployment updated."
+                            echo "Auth Service deployment updated successfully."
                         }
                     }
                     echo 'Auth Service deployment pipeline finished.'
@@ -103,7 +131,7 @@ pipeline {
             }
         }
 
-        // --- Comment Service Stages ---
+        // --- Comment Service Stages --- (Similar structure, yq enabled for debugging)
         stage('Build Comment Service') {
             steps {
                 dir('microservices/comment-service') {
@@ -115,7 +143,6 @@ pipeline {
 
         stage('Test Comment Service') {
             steps {
-                
                 withCredentials([
                     string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT'),
                     string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID'),
@@ -145,15 +172,16 @@ pipeline {
                 script {
                     echo 'Deploying Comment Service to Kubernetes...'
 
+                    def serviceImage = "gworld1/comment-service:${env.BUILD_NUMBER}"
                     def manifestPath = "k8s-manifests/comment-service-deployment.yaml"
 
                     withCredentials([
                         file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG_FILE_PATH'),
-                        
-                        string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT_VAL_COMMENT'), 
-                        string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID_VAL_COMMENT'), 
-                        string(credentialsId: 'APPWRITE_API_KEY_CREDENTIAL', variable: 'APPWRITE_API_KEY_VAL_COMMENT'), 
-                        string(credentialsId: 'APPWRITE_DATABASE_ID_CREDENTIAL', variable: 'APPWRITE_DATABASE_ID_VAL_COMMENT') 
+                        // Add credentials specific to Comment Service secrets here (replace placeholders)
+                        string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT_VAL_COMMENT'),
+                        string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID_VAL_COMMENT'),
+                        string(credentialsId: 'APPWRITE_API_KEY_CREDENTIAL', variable: 'APPWRITE_API_KEY_VAL_COMMENT'),
+                        string(credentialsId: 'APPWRITE_DATABASE_ID_CREDENTIAL', variable: 'APPWRITE_DATABASE_ID_VAL_COMMENT')
                     ]) {
                         withEnv(["KUBECONFIG=${KUBECONFIG_FILE_PATH}"]) {
                             echo "Kubectl is configured."
@@ -169,13 +197,30 @@ pipeline {
                             """
                             echo "Kubernetes secret for Comment Service handled."
 
+                            echo "Attempting to update image in ${manifestPath} to ${serviceImage}..."
+                            sh 'yq --version'
+
+                            echo "--- Manifest content BEFORE yq modification: ---"
+                            sh "cat ${manifestPath}"
+                            echo "--- End of BEFORE yq content ---"
+
+                            sh """
+                                yq e '.spec.template.spec.containers[] | select(.name == "comment-service").image = "${serviceImage}"' -i "${manifestPath}"
+                            """
+
+                            echo "--- Manifest content AFTER yq modification: ---"
+                            sh "cat ${manifestPath}"
+                            echo "--- End of AFTER yq content ---"
+                            sh "ls -l ${manifestPath}"
+                            echo "Image update attempted via yq."
+
                             echo "Applying Comment Service Kubernetes manifests from ${manifestPath}..."
                             sh "kubectl apply -f ${manifestPath}"
                             echo "Comment Service Kubernetes manifests applied."
 
                             echo "Waiting for Comment Service deployment to roll out..."
                             sh "kubectl rollout status deployment/comment-service"
-                            echo "Comment Service deployment updated."
+                            echo "Comment Service deployment updated successfully."
                         }
                     }
                     echo 'Comment Service deployment pipeline finished.'
@@ -183,7 +228,7 @@ pipeline {
             }
         }
 
-        // --- Like Service Stages ---
+        // --- Like Service Stages --- (Similar structure, yq enabled for debugging)
         stage('Build Like Service') {
             steps {
                 dir('microservices/like-service') {
@@ -195,7 +240,6 @@ pipeline {
 
         stage('Test Like Service') {
             steps {
-                
                 withCredentials([
                     string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT'),
                     string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID'),
@@ -225,15 +269,16 @@ pipeline {
                 script {
                     echo 'Deploying Like Service to Kubernetes...'
 
+                    def serviceImage = "gworld1/like-service:${env.BUILD_NUMBER}"
                     def manifestPath = "k8s-manifests/like-service-deployment.yaml"
 
                     withCredentials([
                         file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG_FILE_PATH'),
-                        
-                        string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT_VAL_LIKE'), 
-                        string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID_VAL_LIKE'), 
-                        string(credentialsId: 'APPWRITE_API_KEY_CREDENTIAL', variable: 'APPWRITE_API_KEY_VAL_LIKE'), 
-                        string(credentialsId: 'APPWRITE_DATABASE_ID_CREDENTIAL', variable: 'APPWRITE_DATABASE_ID_VAL_LIKE') 
+                        // Add credentials specific to Like Service secrets here (replace placeholders)
+                        string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT_VAL_LIKE'),
+                        string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID_VAL_LIKE'),
+                        string(credentialsId: 'APPWRITE_API_KEY_CREDENTIAL', variable: 'APPWRITE_API_KEY_VAL_LIKE'),
+                        string(credentialsId: 'APPWRITE_DATABASE_ID_CREDENTIAL', variable: 'APPWRITE_DATABASE_ID_VAL_LIKE')
                     ]) {
                         withEnv(["KUBECONFIG=${KUBECONFIG_FILE_PATH}"]) {
                             echo "Kubectl is configured."
@@ -249,13 +294,30 @@ pipeline {
                             """
                             echo "Kubernetes secret for Like Service handled."
 
+                            echo "Attempting to update image in ${manifestPath} to ${serviceImage}..."
+                            sh 'yq --version'
+
+                            echo "--- Manifest content BEFORE yq modification: ---"
+                            sh "cat ${manifestPath}"
+                            echo "--- End of BEFORE yq content ---"
+
+                            sh """
+                                yq e '.spec.template.spec.containers[] | select(.name == "like-service").image = "${serviceImage}"' -i "${manifestPath}"
+                            """
+
+                            echo "--- Manifest content AFTER yq modification: ---"
+                            sh "cat ${manifestPath}"
+                            echo "--- End of AFTER yq content ---"
+                            sh "ls -l ${manifestPath}"
+                            echo "Image update attempted via yq."
+
                             echo "Applying Like Service Kubernetes manifests from ${manifestPath}..."
                             sh "kubectl apply -f ${manifestPath}"
                             echo "Like Service Kubernetes manifests applied."
 
                             echo "Waiting for Like Service deployment to roll out..."
                             sh "kubectl rollout status deployment/like-service"
-                            echo "Like Service deployment updated."
+                            echo "Like Service deployment updated successfully."
                         }
                     }
                     echo 'Like Service deployment pipeline finished.'
@@ -263,7 +325,7 @@ pipeline {
             }
         }
 
-        // --- Post Service Stages ---
+        // --- Post Service Stages --- (Similar structure, yq enabled for debugging)
         stage('Build Post Service') {
             steps {
                 dir('microservices/post-service') {
@@ -275,7 +337,6 @@ pipeline {
 
         stage('Test Post Service') {
             steps {
-                
                 withCredentials([
                     string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT'),
                     string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID'),
@@ -305,15 +366,16 @@ pipeline {
                 script {
                     echo 'Deploying Post Service to Kubernetes...'
 
+                    def serviceImage = "gworld1/post-service:${env.BUILD_NUMBER}"
                     def manifestPath = "k8s-manifests/post-service-deployment.yaml"
 
                     withCredentials([
                         file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG_FILE_PATH'),
-                        
-                        string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT_VAL_POST'), 
-                        string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID_VAL_POST'), 
-                        string(credentialsId: 'APPWRITE_API_KEY_CREDENTIAL', variable: 'APPWRITE_API_KEY_VAL_POST'), 
-                        string(credentialsId: 'APPWRITE_DATABASE_ID_CREDENTIAL', variable: 'APPWRITE_DATABASE_ID_VAL_POST') 
+                        // Add credentials specific to Post Service secrets here (replace placeholders)
+                        string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT_VAL_POST'),
+                        string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID_VAL_POST'),
+                        string(credentialsId: 'APPWRITE_API_KEY_CREDENTIAL', variable: 'APPWRITE_API_KEY_VAL_POST'),
+                        string(credentialsId: 'APPWRITE_DATABASE_ID_CREDENTIAL', variable: 'APPWRITE_DATABASE_ID_VAL_POST')
                     ]) {
                         withEnv(["KUBECONFIG=${KUBECONFIG_FILE_PATH}"]) {
                             echo "Kubectl is configured."
@@ -329,13 +391,30 @@ pipeline {
                             """
                             echo "Kubernetes secret for Post Service handled."
 
+                            echo "Attempting to update image in ${manifestPath} to ${serviceImage}..."
+                            sh 'yq --version'
+
+                            echo "--- Manifest content BEFORE yq modification: ---"
+                            sh "cat ${manifestPath}"
+                            echo "--- End of BEFORE yq content ---"
+
+                            sh """
+                                yq e '.spec.template.spec.containers[] | select(.name == "post-service").image = "${serviceImage}"' -i "${manifestPath}"
+                            """
+
+                            echo "--- Manifest content AFTER yq modification: ---"
+                            sh "cat ${manifestPath}"
+                            echo "--- End of AFTER yq content ---"
+                            sh "ls -l ${manifestPath}"
+                            echo "Image update attempted via yq."
+
                             echo "Applying Post Service Kubernetes manifests from ${manifestPath}..."
                             sh "kubectl apply -f ${manifestPath}"
                             echo "Post Service Kubernetes manifests applied."
 
                             echo "Waiting for Post Service deployment to roll out..."
                             sh "kubectl rollout status deployment/post-service"
-                            echo "Post Service deployment updated."
+                            echo "Post Service deployment updated successfully."
                         }
                     }
                     echo 'Post Service deployment pipeline finished.'
