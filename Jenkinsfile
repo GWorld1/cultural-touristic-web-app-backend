@@ -3,7 +3,7 @@ pipeline {
 
     tools {
         git 'Default'
-        nodejs 'JenkinsNodeJS' // Make sure this matches your NodeJS tool configuration name in Jenkins
+        nodejs 'JenkinsNodeJS' 
     }
 
     stages {
@@ -115,7 +115,7 @@ pipeline {
 
         stage('Test Comment Service') {
             steps {
-                // Adjust these credentials based on your Comment Service's needs
+                
                 withCredentials([
                     string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT'),
                     string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID'),
@@ -149,11 +149,11 @@ pipeline {
 
                     withCredentials([
                         file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG_FILE_PATH'),
-                        // Add credentials specific to Comment Service secrets here
-                        string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT_VAL_COMMENT'), // Placeholder
-                        string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID_VAL_COMMENT'), // Placeholder
-                        string(credentialsId: 'APPWRITE_API_KEY_CREDENTIAL', variable: 'APPWRITE_API_KEY_VAL_COMMENT'), // Placeholder
-                        string(credentialsId: 'APPWRITE_DATABASE_ID_CREDENTIAL', variable: 'APPWRITE_DATABASE_ID_VAL_COMMENT') // Placeholder
+                        
+                        string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT_VAL_COMMENT'), 
+                        string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID_VAL_COMMENT'), 
+                        string(credentialsId: 'APPWRITE_API_KEY_CREDENTIAL', variable: 'APPWRITE_API_KEY_VAL_COMMENT'), 
+                        string(credentialsId: 'APPWRITE_DATABASE_ID_CREDENTIAL', variable: 'APPWRITE_DATABASE_ID_VAL_COMMENT') 
                     ]) {
                         withEnv(["KUBECONFIG=${KUBECONFIG_FILE_PATH}"]) {
                             echo "Kubectl is configured."
@@ -195,7 +195,7 @@ pipeline {
 
         stage('Test Like Service') {
             steps {
-                // Adjust these credentials based on your Like Service's needs
+                
                 withCredentials([
                     string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT'),
                     string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID'),
@@ -229,11 +229,11 @@ pipeline {
 
                     withCredentials([
                         file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG_FILE_PATH'),
-                        // Add credentials specific to Like Service secrets here
-                        string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT_VAL_LIKE'), // Placeholder
-                        string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID_VAL_LIKE'), // Placeholder
-                        string(credentialsId: 'APPWRITE_API_KEY_CREDENTIAL', variable: 'APPWRITE_API_KEY_VAL_LIKE'), // Placeholder
-                        string(credentialsId: 'APPWRITE_DATABASE_ID_CREDENTIAL', variable: 'APPWRITE_DATABASE_ID_VAL_LIKE') // Placeholder
+                        
+                        string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT_VAL_LIKE'), 
+                        string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID_VAL_LIKE'), 
+                        string(credentialsId: 'APPWRITE_API_KEY_CREDENTIAL', variable: 'APPWRITE_API_KEY_VAL_LIKE'), 
+                        string(credentialsId: 'APPWRITE_DATABASE_ID_CREDENTIAL', variable: 'APPWRITE_DATABASE_ID_VAL_LIKE') 
                     ]) {
                         withEnv(["KUBECONFIG=${KUBECONFIG_FILE_PATH}"]) {
                             echo "Kubectl is configured."
@@ -275,7 +275,7 @@ pipeline {
 
         stage('Test Post Service') {
             steps {
-                // Adjust these credentials based on your Post Service's needs
+                
                 withCredentials([
                     string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT'),
                     string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID'),
@@ -309,11 +309,11 @@ pipeline {
 
                     withCredentials([
                         file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG_FILE_PATH'),
-                        // Add credentials specific to Post Service secrets here
-                        string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT_VAL_POST'), // Placeholder
-                        string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID_VAL_POST'), // Placeholder
-                        string(credentialsId: 'APPWRITE_API_KEY_CREDENTIAL', variable: 'APPWRITE_API_KEY_VAL_POST'), // Placeholder
-                        string(credentialsId: 'APPWRITE_DATABASE_ID_CREDENTIAL', variable: 'APPWRITE_DATABASE_ID_VAL_POST') // Placeholder
+                        
+                        string(credentialsId: 'APPWRITE_ENDPOINT_CREDENTIAL', variable: 'APPWRITE_ENDPOINT_VAL_POST'), 
+                        string(credentialsId: 'APPWRITE_PROJECT_ID_CREDENTIAL', variable: 'APPWRITE_PROJECT_ID_VAL_POST'), 
+                        string(credentialsId: 'APPWRITE_API_KEY_CREDENTIAL', variable: 'APPWRITE_API_KEY_VAL_POST'), 
+                        string(credentialsId: 'APPWRITE_DATABASE_ID_CREDENTIAL', variable: 'APPWRITE_DATABASE_ID_VAL_POST') 
                     ]) {
                         withEnv(["KUBECONFIG=${KUBECONFIG_FILE_PATH}"]) {
                             echo "Kubectl is configured."
